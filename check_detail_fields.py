@@ -40,9 +40,10 @@ REQUIRED_FIELDS = [
     "place_of_origin",
     "credit_line",
     "image_id",
+    "short_description",
+    "description"
 ]
 
-DESCRIPTION_FIELDS = ["short_description", "description"]
 
 
 def is_missing(value) -> bool:
@@ -99,15 +100,25 @@ def check_artist(artist: str, max_artworks: int = None, delay: float = 0.2):
     problem_rows = []
     total_checked = 0
 
+    # Description-pair breakdown (mutually exclusive buckets).
+    only_desc_missing = 0    # short_description present, description missing
+    only_short_missing = 0   # description present, short_description missing
+    both_missing = 0         # neither present
+
     for i, artwork_id in enumerate(ids, start=1):
         detail = fetch_detail(session, artwork_id)
         total_checked += 1
 
-        missing = [f for f in REQUIRED_FIELDS if is_missing(detail.get(f))]
+        short_missing = is_missing(detail.get("short_description"))
+        desc_missing = is_missing(detail.get("description"))
+        if short_missing and desc_missing:
+            both_missing += 1
+        elif desc_missing:  # short present, description missing
+            only_desc_missing += 1
+        elif short_missing:  # description present, short missing
+            only_short_missing += 1
 
-        # Description: only a problem if BOTH short_description and description are missing.
-        if all(is_missing(detail.get(f)) for f in DESCRIPTION_FIELDS):
-            missing.append("short_description/description")
+        missing = [f for f in REQUIRED_FIELDS if is_missing(detail.get(f))]
 
         if missing:
             problem_rows.append(
@@ -127,6 +138,12 @@ def check_artist(artist: str, max_artworks: int = None, delay: float = 0.2):
 
     print(f"\nTotal artworks checked: {total_checked}")
     print(f"All rows have every required detail field: {all_clean}\n")
+
+    print("Description-pair breakdown:")
+    print(f"  short_description MISSING, description present: {only_short_missing}")
+    print(f"  description MISSING, short_description present: {only_desc_missing}")
+    print(f"  BOTH missing:                                   {both_missing}")
+    print(f"  at least one present:                           {total_checked - both_missing}\n")
 
     if not all_clean:
         print(f"Rows with missing fields ({len(problem_rows)}):")
