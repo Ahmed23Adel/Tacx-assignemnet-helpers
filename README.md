@@ -16,6 +16,8 @@ overview and detail screens should handle missing data.
   (the fields used by the detail screen).
 - **`print_sample_description.py`** — scans an artist's works and prints the
   first one that contains descriptive text to inspect the API response.
+- **`check_fields_lens.py`** — fetches all artworks and measures the length and availability of the `medium_display` and `date_display` fields to guide UI design decisions.
+  
 
 Run with:
 
